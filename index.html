@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Ikeja LGA PHC Equity Dashboard 2024</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <style>
+    body { margin:0; font-family: Arial; min-height: 100vh; }
+    #map { height: calc(100vh - 220px); min-height: 500px; width: 100%; }
+    h1 { text-align:center; margin:10px 10px 4px; color:#2c3e50; }
+    .titleSubtext {
+      text-align: center;
+      margin: 0 10px 10px;
+      font-size: 13px;
+      color: #2c3e50;
+      font-weight: 600;
+    }
+    .plainLanguageNote {
+      text-align: center;
+      margin: 0 10px 12px;
+      font-size: 12px;
+      color: #495867;
+      font-weight: 600;
+    }
+    #infoBox {
+      position: absolute;
+      top: 70px;
+      left: 20px;
+      z-index: 1000;
+      background: rgba(255,255,255,0.95);
+      padding: 12px 14px;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.15);
+      max-width: 260px;
+      font-size: 14px;
+    }
+    #infoBox h3 { margin: 0 0 8px; font-size: 16px; }
+    #infoBox p { margin: 4px 0; }
+    #filters {
+      position: absolute;
+      top: 70px;
+      right: 20px;
+      z-index: 1200;
+      background: rgba(255,255,255,0.95);
+      padding: 12px 14px;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.15);
+      min-width: 220px;
+    }
+    #filters label {
+      display: block;
+      font-weight: bold;
+      margin-bottom: 6px;
+    }
+    #filters select {
+      width: 100%;
+      padding: 8px;
+      border-radius: 4px;
+      border: 1px solid #cfcfcf;
+      font-size: 14px;
+    }
+    #chartPanel {
+      position: absolute;
+      right: 20px;
+      top: 180px;
+      z-index: 1000;
+      width: 260px;
+      height: 280px;
+      background: rgba(255,255,255,0.95);
+      padding: 12px;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.15);
+    }
+    #chartPanel h3 {
+      margin: 0 0 8px;
+      font-size: 16px;
+      text-align: center;
+    }
+    #equityChart {
+      display: block;
+      width: 100% !important;
+      height: 120px !important;
+    }
+    #summaryPanel {
+      margin-top: 10px;
+      border-top: 1px solid #e0e0e0;
+      padding-top: 8px;
+    }
+    .summaryRow {
+      display: flex;
+      justify-content: space-between;
+      margin: 6px 0;
+      font-size: 13px;
+    }
+    .summaryColor {
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      border-radius: 2px;
+      margin-right: 6px;
+      vertical-align: middle;
+    }
+    .legend { 
+      position:absolute; bottom:20px; right:20px; background:white; 
+      padding:12px; border-radius:6px; box-shadow:0 0 10px rgba(0,0,0,0.2); z-index:1000;
+      max-width: 480px;
+      min-width: 280px;
+      font-size: 13px;
+     }
+    .legend span { display:inline-block; width:18px; height:18px; margin-right:5px; }
+    .legend .equity-swatch {
+      border: 1px solid rgba(255,255,255,0.7);
+      opacity: 0.7;
+    }
+    .legend .legend-row { display:flex; align-items:center; gap:8px; margin:6px 0; white-space:nowrap; }
+    .legend .legend-label { flex: 1 1 auto; }
+    .legend .boundary-swatch { display:inline-block; width:18px; height:12px; border:2px solid #2c3e50; background: rgba(44,62,80,0.06); border-radius:2px; margin-right:8px; vertical-align:middle; }
+    .legend .cross-swatch {
+      position: relative;
+      display: inline-block;
+      width: 22px;
+      height: 22px;
+      margin-right: 5px;
+      vertical-align: middle;
+      background: transparent;
+    }
+    .legend .cross-swatch::before,
+    .legend .cross-swatch::after {
+      content: "";
+      position: absolute;
+      background: #1a7f3b;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      box-shadow: 0 0 0 1px rgba(255,255,255,0.8);
+    }
+    .legend .cross-swatch::before {
+      width: 3px;
+      height: 22px;
+    }
+    .legend .cross-swatch::after {
+      width: 22px;
+      height: 3px;
+    }
+    .data-footer {
+      text-align: center;
+      font-size: 12px;
+      color: #4d4d4d;
+      padding: 8px 12px 14px;
+      background: #f7f7f7;
+      border-top: 1px solid #e6e6e6;
+      clear: both;
+      box-sizing: border-box;
+      width: 100%;
+      position: relative;
+      z-index: 10;
+    }
+    .leaflet-popup {
+      z-index: 2000 !important;
+    }
+    .leaflet-popup-pane {
+      z-index: 2000 !important;
+    }
+    .leaflet-popup-content-wrapper,
+    .leaflet-popup-tip {
+      z-index: 2000 !important;
+    }
+    @media (max-width: 640px) {
+      /* Make the filters flow in document order on small screens so they don't overlap the header */
+      #filters {
+        position: static !important;
+        top: auto !important;
+        right: auto !important;
+        left: auto !important;
+        width: calc(100% - 24px) !important;
+        margin: 10px auto 6px auto !important;
+        box-shadow: 0 6px 18px rgba(0,0,0,0.08) !important;
+      }
+
+      /* Move info box and chart panel to avoid overlap */
+      #infoBox { position: static !important; width: calc(100% - 24px) !important; margin: 6px auto !important; }
+      #chartPanel { right: 10px !important; top: auto !important; bottom: 110px !important; width: 220px !important; }
+
+      /* Slightly narrower legend to fit mobile */
+      .legend { max-width: 320px !important; left: 10px !important; right: auto !important; }
+    }
+  </style>
+</head>
+<body>
+  <h1>Ikeja LGA Primary Health Care Equity Dashboard</h1>
+  <div class="titleSubtext">Red = Urgent Need | Yellow = Underserved | Green = Meets WHO Standard of 1 PHC per 10,000 people</div>
+  <div class="plainLanguageNote">This map shows where health access is most strained and where primary health care coverage is strongest in Ikeja.</div>
+  <div id="map"></div>
+  <div id="filters">
+    <label for="equityFilter">Filter by Equity</label>
+    <select id="equityFilter">
+      <option value="All">All Classes</option>
+      <option value="Urgent Need">Urgent Need</option>
+      <option value="Underserved">Underserved</option>
+      <option value="Adequate">Adequate</option>
+    </select>
+  </div>
+  <div id="chartPanel">
+    <h3>Grid Class Distribution</h3>
+    <canvas id="equityChart"></canvas>
+    <div id="summaryPanel">
+      <div class="summaryRow"><span><span class="summaryColor" style="background: rgba(255, 0, 0, 0.42);"></span>Urgent Need</span><strong id="summary-urgent-need">0</strong></div>
+      <div class="summaryRow"><span><span class="summaryColor" style="background: rgba(255, 165, 0, 0.42);"></span>Underserved</span><strong id="summary-underserved">0</strong></div>
+      <div class="summaryRow"><span><span class="summaryColor" style="background: rgba(0, 128, 0, 0.42);"></span>Adequate</span><strong id="summary-adequate">0</strong></div>
+    </div>
+  </div>
+  <div class="legend">
+    <b>Legend</b>
+    <div class="legend-row"><span class="equity-swatch" style="background: rgba(255, 0, 0, 0.42);"></span><span class="legend-label">Urgent Need - 0 PHC, High Population</span></div>
+    <div class="legend-row"><span class="equity-swatch" style="background: rgba(255, 165, 0, 0.42);"></span><span class="legend-label">Underserved - 0 PHC, Low Population</span></div>
+    <div class="legend-row"><span class="equity-swatch" style="background: rgba(0, 128, 0, 0.42);"></span><span class="legend-label">Adequate</span></div>
+    <div class="legend-row"><span class="boundary-swatch"></span><span class="legend-label">Ikeja boundary</span></div>
+    <div class="legend-row"><span class="cross-swatch"></span><span class="legend-label">PHC</span></div>
+  </div>
+  <div class="data-footer">
+    Source: Nigeria Health Facility Registry 2021 + WorldPop 2024 + GRID 3 | Author: Favour Olamilekan Adeoye
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
