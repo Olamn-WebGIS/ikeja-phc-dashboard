@@ -50,7 +50,7 @@ function getZoneColor(value) {
 
 function formatPopulation(value) {
   if (value === null || value === undefined || value === '') return 'N/A';
-  return Number(value).toLocaleString();
+  return Math.ceil(Number(value)).toLocaleString();
 }
 
 function formatFacilityCount(value) {
