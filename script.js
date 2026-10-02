@@ -61,7 +61,7 @@ function formatFacilityCount(value) {
 function formatPeoplePerPHC(value) {
   if (value === null || value === undefined || value === '' || Number(value) === 0) return 'No Facility';
   var numericValue = Number(value);
-  return numericValue < 99999 ? numericValue.toLocaleString() : 'No Facility';
+  return numericValue < 99999 ? Math.ceil(numericValue).toLocaleString() : 'No Facility';
 }
 
 function updateInfoBox(feature) {
